@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Green Corridor Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="dashboard-container">
+        <header>
+            <h1>Dynamic Green Corridor Dispatch</h1>
+            <p>Agent Console: Incident Logging & Fleet Routing</p>
+        </header>
+        
+        <div id="controls-panel">
+            <div class="input-group">
+                <label for="incidentType">Type of Incident:</label>
+                <select id="incidentType">
+                    <option value="cardiac">Cardiac Arrest</option>
+                    <option value="accident">Severe Accident</option>
+                    <option value="fire">Fire Emergency</option>
+                    <option value="maternity">Maternity Emergency</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label for="incidentLocation">Location:</label>
+                <input type="text" id="incidentLocation" placeholder="Click map to log incident" readonly>
+            </div>
+            <button id="dispatch-btn" disabled style="opacity: 0.5; cursor: not-allowed;">Dispatch Ambulance</button>
+        </div>
+
+        <div id="map-container">
+            <div id="map"></div>
+        </div>
+    </div>
+
+    <!-- Google Maps API Key Added with Places Library -->
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBm52PmFkbHGAL2TrVJwbmeU_nx7J5OBYY&v=weekly&callback=initMap"></script>
+    <script src="app.js"></script>
+</body>
+</html>

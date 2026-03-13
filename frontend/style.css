@@ -1,0 +1,120 @@
+:root {
+    --bg-color: #121212;
+    --panel-bg: rgba(30, 30, 30, 0.8);
+    --text-color: #f0f0f0;
+    --accent-color: #00ff88;
+    --red-signal: #ff4444;
+    --font-family: 'Inter', 'Segoe UI', sans-serif;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: var(--font-family);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    overflow: hidden;
+}
+
+#dashboard-container {
+    width: 95%;
+    height: 95%;
+    display: flex;
+    flex-direction: column;
+    background: var(--panel-bg);
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(10px);
+    overflow: hidden;
+}
+
+header {
+    padding: 20px;
+    text-align: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+header h1 {
+    font-size: 1.8rem;
+    color: var(--accent-color);
+    letter-spacing: 1px;
+}
+
+header p {
+    font-size: 0.9rem;
+    color: #a0a0a0;
+    margin-top: 5px;
+}
+
+#controls-panel {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.input-group label {
+    font-size: 0.85rem;
+    margin-bottom: 5px;
+    color: #ccc;
+}
+
+.input-group input {
+    padding: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    color: white;
+    width: 250px;
+    outline: none;
+    transition: border 0.3s;
+}
+
+.input-group input:focus {
+    border-color: var(--accent-color);
+}
+
+#start-btn {
+    padding: 12px 24px;
+    background-color: var(--accent-color);
+    color: #000;
+    font-weight: bold;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    align-self: flex-end;
+}
+
+#start-btn:hover {
+    box-shadow: 0 0 15px var(--accent-color);
+    transform: translateY(-2px);
+}
+
+#map-container {
+    flex-grow: 1;
+    position: relative;
+    padding: 20px;
+}
+
+#map {
+    width: 100%;
+    height: 100%;
+    border-radius: 12px;
+    box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+}

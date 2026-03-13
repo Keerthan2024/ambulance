@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+websockets
+googlemaps
+pydantic
+python-dotenv
+polyline
+geopy
