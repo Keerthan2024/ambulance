@@ -38,6 +38,51 @@ def get_all_hospitals():
         print(f"Cached {len(_hospitals_cache)} hospitals.")
     return {"hospitals": _hospitals_cache}
 
+@app.get("/api/preview-route")
+def get_preview_route(incident_lat: float, incident_lng: float):
+    """
+    Called by the frontend after the user clicks a map location.
+    Returns:
+      - nearest ambulance position
+      - route1: ambulance → incident
+      - nearest hospital
+      - route2: incident → hospital
+    """
+    incident = {"lat": incident_lat, "lng": incident_lng}
+
+    # Find nearest idle ambulance
+    closest_amb = min(fleet, key=lambda a: geodesic(
+        (incident_lat, incident_lng), (a["lat"], a["lng"])
+    ).meters)
+
+    origin = {"lat": closest_amb["lat"], "lng": closest_amb["lng"]}
+    route1 = routing_engine.get_route(origin, incident)
+    if "error" in route1:
+        return {"error": route1["error"]}
+
+    # Find nearest hospital
+    hospital = None
+    if _hospitals_cache:
+        hospital = min(_hospitals_cache, key=lambda h: geodesic(
+            (incident_lat, incident_lng), (h["lat"], h["lng"])
+        ).meters)
+    if not hospital:
+        hospital = routing_engine.get_nearest_hospital(incident)
+        if "error" in hospital:
+            return {"error": hospital["error"]}
+
+    target = {"lat": hospital["lat"], "lng": hospital["lng"]}
+    route2 = routing_engine.get_route(incident, target)
+    if "error" in route2:
+        return {"error": route2["error"]}
+
+    return {
+        "ambulance": closest_amb,
+        "route1": route1,
+        "hospital": hospital,
+        "route2": route2,
+    }
+
 import random
 from geopy.distance import geodesic
 
@@ -113,6 +158,17 @@ def preview_route(incident_lat: float, incident_lng: float):
     if "error" in route2:
         return {"error": f"Route 2 failed: {route2['error']}"}
 
+    # ── Traffic Signals for both legs ────────────────────────────────────────
+    sc = SignalController()
+    sigs1 = sc.initialize_signals(route1.get("decoded_points", []), route1.get("steps", []))
+    sigs2 = sc.initialize_signals(route2.get("decoded_points", []), route2.get("steps", []))
+    
+    # De-duplicate signals that might be at the same junction (incident location)
+    all_sigs = sigs1 + sigs2
+    unique_sigs = {}
+    for s in all_sigs:
+        unique_sigs[s["id"]] = s
+
     return {
         "ambulance": {
             "lat": amb['lat'],
@@ -122,6 +178,7 @@ def preview_route(incident_lat: float, incident_lng: float):
         "hospital": hospital,
         "route1":   route1,   # ambulance → incident
         "route2":   route2,   # incident  → hospital
+        "signals":  list(unique_sigs.values())
     }
 # ─────────────────────────────────────────────────────────────────────────────
 

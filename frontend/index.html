@@ -5,14 +5,54 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dynamic Green Corridor Dashboard</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        /* Ambulance pulse animation used by updateAmbulance() */
+        @keyframes ambPulse {
+            from { box-shadow: 0 0 10px 3px rgba(255,80,0,.6); }
+            to   { box-shadow: 0 0 22px 9px rgba(255,80,0,.95); }
+        }
+
+        /* Live status bar */
+        #status-bar {
+            display: none;
+            gap: 18px;
+            align-items: center;
+            background: rgba(0,0,0,.55);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(255,255,255,.08);
+            padding: 8px 24px;
+            font-size: .82rem;
+            color: #ddd;
+            font-family: 'Inter','Segoe UI',sans-serif;
+            flex-wrap: wrap;
+        }
+        .status-phase { font-weight: 700; font-size: .9rem; }
+        .status-item  { color: #bbb; }
+        .status-item strong { color: #fff; }
+
+        /* Dispatch button state overrides */
+        #dispatch-btn.btn-calculating { background: #555 !important; cursor: wait !important; }
+        #dispatch-btn.btn-dispatching { cursor: default !important; }
+
+        /* Incident type select styling */
+        .input-group select {
+            padding: 10px;
+            border: 1px solid rgba(255,255,255,.2);
+            border-radius: 8px;
+            background: rgba(255,255,255,.05);
+            color: white;
+            outline: none;
+            font-family: inherit;
+        }
+    </style>
 </head>
 <body>
     <div id="dashboard-container">
         <header>
             <h1>Dynamic Green Corridor Dispatch</h1>
-            <p>Agent Console: Incident Logging & Fleet Routing</p>
+            <p>Agent Console: Incident Logging &amp; Fleet Routing</p>
         </header>
-        
+
         <div id="controls-panel">
             <div class="input-group">
                 <label for="incidentType">Type of Incident:</label>
@@ -28,16 +68,21 @@
                 <label for="incidentLocation">Location:</label>
                 <input type="text" id="incidentLocation" placeholder="Click map to log incident" readonly>
             </div>
-            <button id="dispatch-btn" disabled style="opacity: 0.5; cursor: not-allowed;">Dispatch Ambulance</button>
+            <button id="dispatch-btn" disabled style="opacity:0.4;cursor:not-allowed;">Dispatch Ambulance</button>
         </div>
+
+        <!-- Live status bar — shown during active dispatch simulation -->
+        <div id="status-bar"></div>
 
         <div id="map-container">
             <div id="map"></div>
         </div>
     </div>
 
-    <!-- Google Maps API Key Added with Places Library -->
-    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBm52PmFkbHGAL2TrVJwbmeU_nx7J5OBYY&v=weekly&callback=initMap"></script>
+    <!-- Google Maps API with geometry library -->
+    <script async defer
+        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBm52PmFkbHGAL2TrVJwbmeU_nx7J5OBYY&v=weekly&libraries=geometry&callback=initMap">
+    </script>
     <script src="app.js"></script>
 </body>
 </html>

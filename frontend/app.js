@@ -286,6 +286,10 @@ async function fetchAndDrawPreview(latLng) {
     mc.style.position = "relative";
     mc.appendChild(previewInfoCard);
 
+    if (data.signals) {
+        drawSignals(data.signals);
+    }
+
     setBtnState("ready");
 }
 
@@ -384,6 +388,13 @@ async function initMap() {
     });
     new google.maps.TrafficLayer().setMap(map);
     map.addListener("click", e => placeIncidentMarker(e.latLng));
+
+    // Pre-cache AdvancedMarkerElement NOW so drawSignals() can use it
+    // synchronously when ROUTE_READY arrives — no race condition possible.
+    const lib = await google.maps.importLibrary("marker");
+    _AdvancedMarkerElement = lib.AdvancedMarkerElement;
+    console.log("[initMap] AdvancedMarkerElement cached.");
+
     _mapReadyResolve();
     findHospitals();
 }
@@ -391,6 +402,7 @@ async function initMap() {
 // ─── Incident marker ──────────────────────────────────────────────────────────
 
 async function placeIncidentMarker(latLng) {
+    await mapReady;
     if (incidentMarker) {
         incidentMarker.position = latLng;
     } else {
@@ -432,6 +444,16 @@ async function createHospitalMarker(h) {
 
 // ─── WebSocket ────────────────────────────────────────────────────────────────
 
+let _AdvancedMarkerElement = null;   // cached after first load
+
+async function ensureMarkerLib() {
+    if (!_AdvancedMarkerElement) {
+        const lib = await google.maps.importLibrary("marker");
+        _AdvancedMarkerElement = lib.AdvancedMarkerElement;
+    }
+    return _AdvancedMarkerElement;
+}
+
 function connectWebSocket() {
     ws = new WebSocket("ws://localhost:8000/ws/simulation");
 
@@ -458,7 +480,7 @@ function connectWebSocket() {
             if (data.phase === 1 && previewAmbulanceId) hideIdleMarker(previewAmbulanceId);
             setBtnState(data.phase === 1 ? "phase1" : "phase2");
             drawRouteOnReady(data.route, data.phase);
-            drawSignals(data.signals);
+            drawSignals(data.signals);   // synchronous — no await needed
         }
 
         else if (data.type === "SIMULATION_UPDATE") {
@@ -488,128 +510,106 @@ function connectWebSocket() {
     ws.onerror = e => console.error("WebSocket error:", e);
 }
 
-// ─── Traffic Signal SVG ───────────────────────────────────────────────────────
+// ─── Traffic Signal Markers ───────────────────────────────────────────────────
 //
-// Each signal renders as a proper 3-lamp traffic light pole.
+// Uses AdvancedMarkerElement with DOM content (cached at initMap startup).
+// _AdvancedMarkerElement is pre-populated in initMap() via importLibrary so
+// drawSignals() can run synchronously — no race condition with SIMULATION_UPDATE.
 //
-// States:
-//   "red"   → top lamp lit bright red   + red  glow  (STOP)
-//   "amber" → middle lamp lit amber     + amber glow  (PREPARE / WARNING)
-//   "green" → bottom lamp lit bright green + green glow  (GO)
-//
-// Types:
-//   "route"   → larger (40×64 px), white pole — ambulance's path
-//   "cross"   → same size, grey pole   — perpendicular traffic
-//
-// We DO NOT render "background" type signals at all — they are not on the route.
+// Signal states:
+//   red    → route signal: STOP      | cross: GO
+//   amber  → route signal: SLOW/WARN | cross: SLOW
+//   green  → route signal: GO        | cross: STOP
 
-const SIG_ROUTE_W = 40, SIG_ROUTE_H = 64;
-const SIG_CROSS_W = 32, SIG_CROSS_H = 52;
-
-function buildSignalSVG(state, type) {
-    const isRoute = type === "route";
-    const w = isRoute ? SIG_ROUTE_W : SIG_CROSS_W;
-    const h = isRoute ? SIG_ROUTE_H : SIG_CROSS_H;
-
-    // Scale factor for viewBox (always drawn at 40×64 internally)
-    const vw = 40, vh = 64;
-
-    const redOn = state === "red";
-    const amberOn = state === "amber";
-    const greenOn = state === "green";
-
-    const redFill = redOn ? "#FF2222" : "#2a0000";
-    const amberFill = amberOn ? "#FFA500" : "#2a1800";
-    const greenFill = greenOn ? "#00EE44" : "#002200";
-
-    const redGlow = redOn ? 'filter:drop-shadow(0 0 6px #FF2222)' : '';
-    const amberGlow = amberOn ? 'filter:drop-shadow(0 0 6px #FFA500)' : '';
-    const greenGlow = greenOn ? 'filter:drop-shadow(0 0 6px #00EE44)' : '';
-
-    // Housing: dark rounded rect; route = white border, cross = grey
-    const housingFill = "#111";
-    const housingStroke = isRoute ? "#ccc" : "#555";
-    const housingStrokeW = isRoute ? 2 : 1.5;
-
-    // Pole
-    const poleFill = isRoute ? "#aaa" : "#555";
-
-    // Label on housing for route signals
-    const label = isRoute
-        ? `<text x="20" y="62.5" font-size="5" fill="#fff" text-anchor="middle"
-               font-family="sans-serif" font-weight="bold">ROUTE</text>`
-        : `<text x="20" y="62.5" font-size="4.5" fill="#888" text-anchor="middle"
-               font-family="sans-serif">CROSS</text>`;
-
-    return `<svg xmlns="http://www.w3.org/2000/svg"
-     width="${w}" height="${h}" viewBox="0 0 ${vw} ${vh}">
-  <!-- Pole -->
-  <rect x="18" y="52" width="4" height="10" fill="${poleFill}" rx="1"/>
-  <!-- Housing -->
-  <rect x="4" y="2" width="32" height="50" rx="6"
-        fill="${housingFill}" stroke="${housingStroke}" stroke-width="${housingStrokeW}"/>
-  <!-- Red lamp -->
-  <circle cx="20" cy="12" r="9" fill="${redFill}" style="${redGlow}"/>
-  <!-- Amber lamp -->
-  <circle cx="20" cy="27" r="9" fill="${amberFill}" style="${amberGlow}"/>
-  <!-- Green lamp -->
-  <circle cx="20" cy="42" r="9" fill="${greenFill}" style="${greenGlow}"/>
-  ${label}
-</svg>`;
-}
-
-// Build a div wrapper containing the SVG — used by both draw and update
-function makeSignalWrapper(state, type, name) {
-    const div = document.createElement("div");
-    div.style.cssText = "display:inline-block;cursor:default;";
-    div.title = `${name || type} [${state.toUpperCase()}]`;
-    div.innerHTML = buildSignalSVG(state, type);
+function _makeSigElement(state, isRoute) {
+    const colors = { red: '#FF3333', amber: '#FFCC00', green: '#00FF66' };
+    const color = colors[state] || '#FF3333';
+    const size = isRoute ? 24 : 16;
+    
+    // Create a container that looks like a signal head
+    const div = document.createElement('div');
+    div.style.cssText = `
+        width:${size}px;height:${size}px;
+        background:#1a1a1a;
+        border:2px solid #444;
+        border-radius:4px;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        cursor:pointer;
+    `;
+    
+    // Create the actual light
+    const light = document.createElement('div');
+    light.id = 'sig-light';
+    light.style.cssText = `
+        width:${size-8}px;height:${size-8}px;
+        background:${color};
+        border-radius:50%;
+        box-shadow: 0 0 ${isRoute ? 12 : 6}px 2px ${color};
+        transition: background 0.3s ease, box-shadow 0.3s ease;
+    `;
+    div.appendChild(light);
     return div;
 }
 
-// ─── Draw signals ─────────────────────────────────────────────────────────────
-
-async function drawSignals(signals) {
+function drawSignals(signals) {
     // Remove old markers
     Object.values(signalMarkers).forEach(e => { if (e?.marker) e.marker.map = null; });
     signalMarkers = {};
 
-    const { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
+    if (!signals || signals.length === 0) {
+        console.warn('[drawSignals] No signals from backend.');
+        return;
+    }
+
+    if (!_AdvancedMarkerElement) {
+        console.error('[drawSignals] AdvancedMarkerElement not yet cached — retrying in 500ms');
+        setTimeout(() => drawSignals(signals), 500);
+        return;
+    }
+
+    console.log(`[drawSignals] Placing ${signals.length} signal markers (${signals.filter(s=>s.type!=='background').length} visible)...`);
 
     for (const sig of signals) {
-        // Skip background signals — only route/cross on the actual path
-        if (sig.type === "background") continue;
+        if (sig.type === 'background') continue;
 
-        const wrapper = makeSignalWrapper(sig.state, sig.type, sig.name);
+        const isRoute = sig.type === 'route';
+        const el = _makeSigElement(sig.state || 'red', isRoute);
 
-        const marker = new AdvancedMarkerElement({
+        const marker = new _AdvancedMarkerElement({
             position: { lat: sig.lat, lng: sig.lng },
             map,
-            content: wrapper,
-            title: `${sig.name || sig.type} [${sig.state.toUpperCase()}]`,
-            zIndex: sig.type === "route" ? 40 : 30
+            content: el,
+            title: `${sig.name || sig.type} [${(sig.state || 'red').toUpperCase()}]`,
+            zIndex: isRoute ? 40 : 30,
         });
 
-        signalMarkers[sig.id] = { marker, wrapper, state: sig.state, type: sig.type, name: sig.name };
+        signalMarkers[sig.id] = { marker, el, light: el.firstChild, state: sig.state, type: sig.type, name: sig.name, isRoute };
     }
+    console.log(`[drawSignals] Done — ${Object.keys(signalMarkers).length} markers placed on map.`);
 }
 
-// ─── Update signals in-place ──────────────────────────────────────────────────
-
 function updateSignals(signals) {
+    if (!signals) return;
+    const colors = { red: '#FF3333', amber: '#FFCC00', green: '#00FF66' };
     for (const sig of signals) {
-        if (sig.type === "background") continue;
+        if (sig.type === 'background') continue;
         const entry = signalMarkers[sig.id];
         if (!entry) continue;
-
-        // Only re-render SVG when state actually changed — avoids DOM thrash
         if (entry.state !== sig.state) {
-            entry.wrapper.innerHTML = buildSignalSVG(sig.state, sig.type);
-            entry.wrapper.title = `${entry.name || sig.type} [${sig.state.toUpperCase()}]`;
+            const newColor = colors[sig.state] || '#FF3333';
+            if (entry.light) {
+                entry.light.style.background = newColor;
+                entry.light.style.boxShadow = `0 0 ${entry.isRoute ? 12 : 6}px 2px ${newColor}`;
+            }
+            entry.marker.title = `${entry.name || sig.type} [${sig.state.toUpperCase()}]`;
             entry.state = sig.state;
         }
     }
 }
+
 
 // ─── Ambulance marker ─────────────────────────────────────────────────────────
 
