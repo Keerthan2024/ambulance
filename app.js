@@ -9,11 +9,11 @@ let ws;
 // ─── Environment-Aware Config ────────────────────────────────────────────────
 const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
     ? 'http://localhost:8000'
-    : ''; // Relative for same-origin, or update this with your production backend URL
+    : 'https://ambulance-production.up.railway.app';
 
 const WS_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
     ? 'ws://localhost:8000'
-    : `ws${window.location.protocol === 'https:' ? 's' : ''}://${window.location.host}`;
+    : 'wss://ambulance-production.up.railway.app';
 
 // ─── Map-ready gate ───────────────────────────────────────────────────────────
 let _mapReadyResolve;
