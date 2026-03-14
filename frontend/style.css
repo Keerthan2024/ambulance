@@ -2,16 +2,12 @@
     --bg-color: #121212;
     --panel-bg: rgba(30, 30, 30, 0.8);
     --text-color: #f0f0f0;
-    --accent-color: #00ff88;
+    --accent-color: #00c853;
     --red-signal: #ff4444;
     --font-family: 'Inter', 'Segoe UI', sans-serif;
 }
 
-* {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-}
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
     background-color: var(--bg-color);
@@ -31,36 +27,36 @@ body {
     flex-direction: column;
     background: var(--panel-bg);
     border-radius: 16px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
     backdrop-filter: blur(10px);
     overflow: hidden;
 }
 
 header {
-    padding: 20px;
+    padding: 12px 20px;
     text-align: center;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid rgba(255,255,255,0.1);
 }
 
 header h1 {
-    font-size: 1.8rem;
+    font-size: 1.5rem;
     color: var(--accent-color);
     letter-spacing: 1px;
 }
 
 header p {
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     color: #a0a0a0;
-    margin-top: 5px;
+    margin-top: 3px;
 }
 
 #controls-panel {
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 20px;
-    padding: 20px;
-    background: rgba(0, 0, 0, 0.2);
+    gap: 14px;
+    padding: 10px 20px;
+    background: rgba(0,0,0,0.2);
 }
 
 .input-group {
@@ -69,47 +65,83 @@ header p {
 }
 
 .input-group label {
-    font-size: 0.85rem;
-    margin-bottom: 5px;
+    font-size: 0.75rem;
+    margin-bottom: 3px;
     color: #ccc;
 }
 
+.input-group select,
 .input-group input {
-    padding: 10px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.05);
+    padding: 6px 9px;
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 7px;
+    background: rgba(255,255,255,0.05);
     color: white;
-    width: 250px;
     outline: none;
+    font-size: 0.8rem;
     transition: border 0.3s;
 }
 
-.input-group input:focus {
-    border-color: var(--accent-color);
-}
+.input-group input { width: 210px; }
 
-#start-btn {
-    padding: 12px 24px;
-    background-color: var(--accent-color);
+.input-group select option { background: #1e1e1e; }
+
+.input-group input:focus,
+.input-group select:focus { border-color: var(--accent-color); }
+
+/* ─── Dispatch button ──────────────────────────────────────────────────────── */
+
+#dispatch-btn {
+    padding: 7px 16px;
+    background-color: #00c853;
     color: #000;
-    font-weight: bold;
+    font-weight: 700;
+    font-size: 0.78rem;
     border: none;
     border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.3s ease;
+    min-width: 148px;
+    text-align: center;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
     align-self: flex-end;
+    transition: background-color 0.3s ease, box-shadow 0.3s ease, transform 0.15s ease;
+
+    /* ── Cursor is ONLY managed here — never set via JS ── */
+    cursor: pointer;
 }
 
-#start-btn:hover {
-    box-shadow: 0 0 15px var(--accent-color);
-    transform: translateY(-2px);
+/* Hover only when truly interactive */
+#dispatch-btn:not([disabled]):hover {
+    box-shadow: 0 0 14px rgba(0,200,83,0.65);
+    transform: translateY(-1px);
 }
+
+/* Disabled state — system shows not-allowed automatically */
+#dispatch-btn[disabled] {
+    cursor: not-allowed;
+    opacity: 0.62;
+}
+
+/* Keep "not-allowed" even while in calculating/dispatching sub-states */
+#dispatch-btn.btn-calculating,
+#dispatch-btn.btn-dispatching {
+    cursor: not-allowed;
+}
+
+/* Expanded style for status messages */
+#dispatch-btn.status-large {
+    padding: 9px 18px;
+    font-size: 0.82rem;
+    min-width: 185px;
+    border-radius: 10px;
+}
+
+/* ─── Map ─────────────────────────────────────────────────────────────────── */
 
 #map-container {
     flex-grow: 1;
     position: relative;
-    padding: 20px;
+    padding: 14px;
 }
 
 #map {
@@ -118,3 +150,27 @@ header p {
     border-radius: 12px;
     box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
 }
+
+/* ─── Status bar ─────────────────────────────────────────────────────────── */
+
+#status-bar {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 6px 18px;
+    background: rgba(0,0,0,0.45);
+    border-top: 1px solid rgba(255,255,255,0.06);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    font-size: 0.76rem;
+    backdrop-filter: blur(6px);
+    flex-wrap: wrap;
+}
+
+.status-phase {
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    font-size: 0.78rem;
+}
+
+.status-item { color: #aaa; }
+.status-item strong { color: #eee; }

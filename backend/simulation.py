@@ -39,6 +39,6 @@ class Simulator:
             self.current_position = p2
             
             # Notify watcher
-            await update_callback(self.current_position)
+            await update_callback(self.current_position, self.current_index)
             
         self.is_running = False
